@@ -3,18 +3,36 @@ BEGIN {
     start = 0;
 
     if (ARGC < 3 || ARGC > 5) {
-        print "awk -f readInterfaces.awk <interfaces file> device=<eth device> [output=all] [debug=1]"
+        print "awk -f readInterfaces.awk <interfaces file> device=<eth device> [output=address|netmask|gateway|hwaddress|ip|all, default:ip] [debug=1]"
         exit 1;
     }
 
-    outAll = 0
+    outAll = 0          # all posible data
+    outAddress = 0;     # address only
+    outHwaddress = 0;   # hwaddress only
+    outNetmask = 0;     # network only
+    outGateway = 0;     # gateway only
+    outIP = 1;          # default : address, network & gateway
 
     for (i = 2; i < ARGC; i++) {
         split(ARGV[i], arg, "=");
         if (arg[1] == "device")
             device = arg[2];
-        else if (arg[1] == "output" && arg[2] == "all")
-            outAll = 1;
+        else if (arg[1] == "output") {
+            outIP = 0;
+            if (arg[2] == "all")
+                outAll = 1;
+            else if (arg[2] == "address")
+                outAddress = 1;
+            else if (arg[2] == "netmask")
+                outNetmask = 1;
+            else if (arg[2] == "gateway")
+                outGateway = 1;
+            else if (arg[2] == "hwaddress")
+                outHwaddress = 1;
+            else if (arg[2] == "ip")
+                outIP = 1;
+        }
         else if (arg[1] == "debug" && arg[2] == "1")
             debug = 1;
     }
@@ -78,11 +96,17 @@ BEGIN {
 
 END {
     if (gotAddr) {
-        printf("%s %s %s\n", interface["address"], interface["netmask"], interface["gateway"]);
-        if (outAll) {
-            delete interface["address"];
-            delete interface["netmask"];
-            delete interface["gateway"];
+        if (outAddress)
+            printf("%s\n", interface["address"]);
+        else if (outNetmask)
+            printf("%s\n", interface["netmask"]);
+        else if (outGateway)
+            printf("%s\n", interface["gateway"]);
+        else if (outIP)
+            printf("%s %s %s\n", interface["address"], interface["netmask"], interface["gateway"]);
+        else if (outHwaddress)
+            printf("%s\n", interface["hwaddress"]);
+        else if (outAll) {
             for (field in interface) {
                 printf("%s %s\n", field, interface[field]);
             }
